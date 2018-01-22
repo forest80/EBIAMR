@@ -4,8 +4,19 @@ nohup.out
 *~
 chk?????
 plt?????
-d/
-f/
-o/
+tmp_build_dir/
 chk?????.old*
 plt?????.old*
+
+# latex
+*.aux
+*.log
+*.bbl
+*.toc
+*.dvi
+*-eps-converted-to.pdf
+
+# python
+*.pyc
+
+.DS_Store
