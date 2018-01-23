@@ -32,19 +32,6 @@ endif
 Ppack   += $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(Ppack)
 
-ifeq ($(USE_HYPRE),TRUE)
-  Bdirs   += HypreABec
-  HYPRE_DIR=$(HOME)/amr/hypre
-  INCLUDE_LOCATIONS += $(HYPRE_DIR)/include
-  LIBRARY_LOCATIONS += $(HYPRE_DIR)/lib
-  LIBRARIES += -lHYPRE_struct_ls -lHYPRE_struct_mv -lHYPRE_blas -lHYPRE_utilities
-  DEFINES += -DMG_USE_HYPRE
-endif
-ifeq ($(USE_METIS),TRUE)
-  Bdirs += metis-4.0/Lib
-  DEFINES += -DBL_USE_METIS
-endif
-
 # job_info support
 CEXE_sources += AMReX_buildInfo.cpp
 CEXE_headers += $(AMREX_HOME)/Tools/C_scripts/AMReX_buildInfo.H

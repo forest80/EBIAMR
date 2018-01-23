@@ -19,9 +19,6 @@ PRECISION = DOUBLE
 USE_FLCTS = TRUE
 USE_FLCTS = FALSE
 
-USE_HYPRE = FALSE
-USE_METIS = FALSE
-
 USE_VELOCITY = TRUE
 USE_VELOCITY = FALSE
 
@@ -35,18 +32,6 @@ EBASE     = amr
 
 ifeq (${USE_FLCTS}, TRUE)
   DEFINES += -DBL_DO_FLCT
-endif
-
-ifeq (${USE_XBLAS}, TRUE)
-   XTRADEFS   += -DXBLAS
-   XTRAINCLOC += $(HOME)/tmp/xblas-1.0.248/src
-   XTRALIBLOC += $(HOME)/tmp/xblas-1.0.248/src
-   XTRALIBS   += -lxblas
-endif
-
-ifeq (${USE_VELOCITY}, TRUE)
-  #AMRVIS_DIR defines the directory in which we will find pAmrvis (e.g. DataServices, AmrData and FABUTIL)
-  AMRVIS_DIR = $(AMREX_HOME)/Src/Extern/amrdata
 endif
 
 # This allows GetForce to call a Fortran routine

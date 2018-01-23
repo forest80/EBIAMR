@@ -47,10 +47,6 @@ namespace
 {
     bool initialized = false;
 
-#if MG_USE_HYPRE
-    bool use_hypre_solve = false;
-#endif
-
     bool benchmarking = false;
 
     bool rz_correction = true;
