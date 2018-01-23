@@ -12,8 +12,6 @@
 #include <HypreABec.H>
 #endif
 
-#include <AMReX_FMultiGrid.H>
-
 using namespace amrex;
 
 #define DEF_LIMITS(fab,fabdat,fablo,fabhi)   \

@@ -115,6 +115,9 @@ NavierStokes::initData ()
     }
 
 #ifdef BL_USE_VELOCITY
+
+    static_assert(false, "BL_USE_VELOCITY not supported yet");
+
     //
     // We want to add the velocity from the supplied plotfile
     // to what we already put into the velocity field via FORT_INITDATA.
