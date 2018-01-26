@@ -47,6 +47,8 @@ namespace
     static int agglomeration = 1;
     static int consolidation = 1;
     static int max_fmg_iter = 0;
+    static int use_hypre = 0;
+    static int hypre_verbose = 0;
 }
 //
 // Set default values in !initialized section of code in constructor!!!
@@ -124,6 +126,10 @@ Diffusion::Diffusion (Amr*               Parent,
         ppdiff.query("agglomeration", agglomeration);
         ppdiff.query("consolidation", consolidation);
         ppdiff.query("max_fmg_iter", max_fmg_iter);
+#ifdef AMREX_USE_HYPRE
+        ppdiff.query("use_hypre", use_hypre);
+        ppdiff.query("hypre_verbose", hypre_verbose);
+#endif
 
         use_mg_precond_flag = (use_mg_precond ? true : false);
 
@@ -509,6 +515,10 @@ Diffusion::diffuse_scalar (Real                   dt,
         }
 
         MLMG mlmg(mlabec);
+        if (use_hypre) {
+            mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
+            mlmg.setBottomVerbose(hypre_verbose);
+        }
         mlmg.setMaxFmgIter(max_fmg_iter);
         mlmg.setVerbose(verbose);
 
@@ -1070,6 +1080,10 @@ Diffusion::diffuse_Vsync_constant_mu (MultiFab&       Vsync,
             }
 
             MLMG mlmg(mlabec);
+            if (use_hypre) {
+                mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
+                mlmg.setBottomVerbose(hypre_verbose);
+            }
             mlmg.setMaxFmgIter(max_fmg_iter);
             mlmg.setVerbose(verbose);
 
@@ -1093,7 +1107,7 @@ Diffusion::diffuse_Vsync_constant_mu (MultiFab&       Vsync,
             {
                 CGSolver cg(*visc_op,use_mg_precond_flag);
                 cg.solve(Soln,Rhs,S_tol,S_tol_abs);
-            } 
+            }
             else
             {
                 MultiGrid mg(*visc_op);
@@ -1420,6 +1434,10 @@ Diffusion::diffuse_Ssync (MultiFab&              Ssync,
         }
 
         MLMG mlmg(mlabec);
+        if (use_hypre) {
+            mlmg.setBottomSolver(MLMG::BottomSolver::hypre);
+            mlmg.setBottomVerbose(hypre_verbose);
+        }
         mlmg.setMaxFmgIter(max_fmg_iter);
         mlmg.setVerbose(verbose);
 
@@ -1479,7 +1497,7 @@ Diffusion::diffuse_Ssync (MultiFab&              Ssync,
         {
             CGSolver cg(*visc_op,use_mg_precond_flag);
             cg.solve(Soln,Rhs,S_tol,S_tol_abs);
-        }        
+        }
         else
         {
             MultiGrid mg(*visc_op);

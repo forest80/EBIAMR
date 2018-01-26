@@ -24,6 +24,10 @@ ifeq ($(USE_PARTICLES),TRUE)
   Pdirs += Particle
 endif
 
+ifeq ($(USE_HYPRE),TRUE)
+    Pdirs += Extern/HYPRE
+endif
+
 ifeq ($(USE_VELOCITY), TRUE)
   DEFINES += -DBL_USE_VELOCITY
   Pdirs += Extern/amrdata
