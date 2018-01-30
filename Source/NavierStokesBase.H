@@ -18,6 +18,7 @@
 #include <SyncRegister.H>
 #include <AMReX_Utility.H>
 #include <ViscBndry.H>
+#include <AMReX_EBFArrayBox.H>
 
 #ifdef PARTICLES
 #include <AMReX_AmrParticles.H>
@@ -119,6 +120,8 @@ public:
 	// change from last iteration is below a prescribed threshold steady_tol. 
     //
     virtual int steadyState ();
+
+    virtual void post_init (amrex::Real stop_time) override;
     //
     // Build any additional data structures after regrid.
     //
@@ -475,7 +478,7 @@ protected:
 
 private:
 
-    void buildMetrics (); // 1-D metric arrays for RZ
+    void buildMetrics ();
     //
     // Compute dpdt
     //
@@ -717,6 +720,16 @@ protected:
     static const int PRESS_GROW = 1;
     static const int DIVU_GROW  = 1;
     static const int DSDT_GROW  = 1;
+
+    //
+    // EB
+    //
+    const amrex::MultiFab* volfrac;
+    const amrex::MultiCutFab* bndrycent;
+    std::array<const amrex::MultiCutFab*,AMREX_SPACEDIM> areafrac;
+    std::array<const amrex::MultiCutFab*,AMREX_SPACEDIM> facecent;
+
+    void fixUpGeometry ();
 };
 
 #endif

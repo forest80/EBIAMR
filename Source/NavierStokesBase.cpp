@@ -24,7 +24,7 @@ Real NavierStokesBase::cfl                = 0.8;
 Real NavierStokesBase::change_max         = 1.1;    
 Real NavierStokesBase::fixed_dt           = -1.0;      
 bool NavierStokesBase::stop_when_steady   = false;
-Real NavierStokesBase::steady_tol 		  = 1.0e-10;
+Real NavierStokesBase::steady_tol 	  = 1.0e-10;
 int  NavierStokesBase::initial_iter       = false;  
 int  NavierStokesBase::initial_step       = false;  
 Real NavierStokesBase::dt_cutoff          = 0.0;     
@@ -802,6 +802,13 @@ NavierStokesBase::buildMetrics ()
 	area[dir].define(getEdgeBoxArray(dir),dmap,1,GEOM_GROW);
         geom.GetFaceArea(area[dir],dir);
     }
+
+    const auto& ebfactory = dynamic_cast<EBFArrayBoxFactory const&>(Factory());
+    
+    volfrac = &(ebfactory.getVolFrac());
+    bndrycent = &(ebfactory.getBndryCent());
+    areafrac = ebfactory.getAreaFrac();
+    facecent = ebfactory.getFaceCent();
 }
 
 void
@@ -2522,6 +2529,12 @@ NavierStokesBase::post_init_state ()
         projector->initialPressureProject(0);
 }
 
+void
+NavierStokesBase::post_init (Real)
+{
+    fixUpGeometry();
+}
+
 //
 // Build any additional data structures after regrid.
 //
@@ -2535,6 +2548,7 @@ NavierStokesBase::post_regrid (int lbase,
         NSPC->Redistribute(lbase);
     }
 #endif
+    fixUpGeometry();
 }
 
 //
@@ -2543,6 +2557,8 @@ NavierStokesBase::post_regrid (int lbase,
 void
 NavierStokesBase::post_restart ()
 {
+    fixUpGeometry();
+
     make_rho_prev_time();
     make_rho_curr_time();
 
@@ -3296,12 +3312,7 @@ NavierStokesBase::SyncProjInterp (MultiFab& phi,
 std::string
 NavierStokesBase::thePlotFileType () const
 {
-    //
-    // Increment this whenever the writePlotFile() format changes.
-    //
-    static const std::string the_plot_file_type("NavierStokes-V1.1");
-
-    return the_plot_file_type;
+    return {"CartGrid-V2.0"};
 }
 
 //
@@ -4408,3 +4419,31 @@ NavierStokesBase::ParticleDerive (const std::string& name,
 }
 
 #endif  // PARTICLES
+
+void
+NavierStokesBase::fixUpGeometry ()
+{
+    const auto& S = get_new_data(State_Type);
+
+    const int ng = volfrac->nGrow();
+
+    const auto& domain = geom.Domain();
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    for (MFIter mfi(S, true); mfi.isValid(); ++mfi)
+    {
+        EBCellFlagFab& flag = const_cast<EBCellFlagFab&>(static_cast<EBFArrayBox const&>
+                                                         (S[mfi]).getEBCellFlagFab());
+        const Box& bx = mfi.growntilebox(ng);
+        if (flag.getType(bx) == FabType::singlevalued)
+        {
+            iamr_ns_eb_fixup_geom(BL_TO_FORTRAN_BOX(bx),
+                                  BL_TO_FORTRAN_ANYD(flag),
+                                  BL_TO_FORTRAN_ANYD((*volfrac)[mfi]),
+                                  BL_TO_FORTRAN_BOX(domain));
+        }
+    }
+
+}

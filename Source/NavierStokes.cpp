@@ -1081,7 +1081,7 @@ NavierStokes::writePlotFile (const std::string& dir,
 	}
     }
 
-    int n_data_items = plot_var_map.size() + num_derive;
+    int n_data_items = plot_var_map.size() + num_derive + 1; // +1 for vfrac
     Real cur_time = state[State_Type].curTime();
 
     if (level == 0 && ParallelDescriptor::IOProcessor())
@@ -1114,6 +1114,10 @@ NavierStokes::writePlotFile (const std::string& dir,
 	    for (i = 0; i < rec->numDerive(); i++)
                 os << rec->variableName(i) << '\n';
         }
+
+        // volfrac
+        os << "vfrac\n";
+
         os << BL_SPACEDIM << '\n';
         os << parent->cumTime() << '\n';
         int f_lev = parent->finestLevel();
@@ -1271,6 +1275,13 @@ NavierStokes::writePlotFile (const std::string& dir,
             PathNameInHeader += BaseName;
             os << PathNameInHeader << '\n';
         }
+
+        // volfrac threshhold for amrvis
+        if (level == parent->finestLevel()) {
+            for (int lev = 0; lev <= parent->finestLevel(); ++lev) {
+                os << ".000001\n";
+            }
+        }
     }
     //
     // We combine all of the multifabs -- state, derived, etc -- into one
@@ -1331,6 +1342,10 @@ NavierStokes::writePlotFile (const std::string& dir,
 	    cnt += ncomp;
 	}
     }
+
+    plotMF.setVal(0.0, cnt, 1, nGrow);
+    MultiFab::Copy(plotMF,*volfrac,0,cnt,1,nGrow);
+
     //
     // Use the Full pathname when naming the MultiFab.
     //
@@ -1370,6 +1385,8 @@ NavierStokes::derive (const std::string& name,
 void
 NavierStokes::post_init (Real stop_time)
 {
+    NavierStokesBase::post_init(stop_time);
+
     if (level > 0)
         //
         // Nothing to sync up at level > 0.

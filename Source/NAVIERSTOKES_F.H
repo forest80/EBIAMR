@@ -174,6 +174,11 @@ extern "C" {
                      const int* dom_lo, const int* dom_hi,
                      const amrex::Real* dx ,const amrex::Real* xlo);
 
+    void iamr_ns_eb_fixup_geom (const int* lo, const int* hi,
+                                void* flag, const int* fglo, const int* fghi,
+                                const amrex_real* volfrac, const int* vlo, const int* vhi,
+                                const int* domlo, const int* domhi);
+
 #ifdef __cplusplus
 }
 #endif
