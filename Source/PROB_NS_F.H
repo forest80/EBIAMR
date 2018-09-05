@@ -15,9 +15,6 @@
 #    define FORT_DIVUFILL    divufill
 #    define FORT_DSDTFILL    dsdtfill
 #    define FORT_MAKEFORCE      makeforce
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-#    define FORT_AVERAGE_EDGE_STATES      average_edge_states
-#endif
 #else
 #  if  defined(BL_FORT_USE_UPPERCASE)
 #    define FORT_INITDATA    INITDATA
@@ -32,9 +29,6 @@
 #    define FORT_DIVUFILL    DIVUFILL
 #    define FORT_DSDTFILL    DSDTFILL
 #    define FORT_MAKEFORCE      MAKEFORCE
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-#    define FORT_AVERAGE_EDGE_STATES      AVERAGE_EDGE_STATES
-#endif
 #  elif defined(BL_FORT_USE_LOWERCASE)
 #    define FORT_INITDATA    initdata
 #    define FORT_DENFILL     denfill
@@ -48,9 +42,6 @@
 #    define FORT_DIVUFILL    divufill
 #    define FORT_DSDTFILL    dsdtfill
 #    define FORT_MAKEFORCE      makeforce
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-#    define FORT_AVERAGE_EDGE_STATES      average_edge_states
-#endif
 #  elif defined(BL_FORT_USE_UNDERSCORE)
 #    define FORT_INITDATA    initdata_
 #    define FORT_DENFILL     denfill_
@@ -64,9 +55,6 @@
 #    define FORT_DIVUFILL    divufill_
 #    define FORT_DSDTFILL    dsdtfill_
 #    define FORT_MAKEFORCE      makeforce_
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-#    define FORT_AVERAGE_EDGE_STATES      average_edge_states_
-#endif
 #  endif
 
 #include <AMReX_ArrayLim.H>
@@ -143,45 +131,6 @@
                           const amrex::Real* dx,
                           const amrex::Real* xlo, const amrex::Real* xhi,
 			  const int* scomp, const int* ncomp);
-#else
-#ifdef MOREGENGETFORCE
-
-     void FORT_AVERAGE_EDGE_STATES(const amrex::Real* Vel,
-				   const amrex::Real* umacx,
-				   const amrex::Real* umacy,
-#if (BL_SPACEDIM==3)
-				   const amrex::Real* umacz,
-#endif
-				   ARLIM_P(vel_lo),  ARLIM_P(vel_hi),
-				   ARLIM_P(umacx_lo), ARLIM_P(umacx_hi),
-				   ARLIM_P(umacy_lo), ARLIM_P(umacy_hi),
-#if (BL_SPACEDIM==3)
-				   ARLIM_P(umacz_lo), ARLIM_P(umacz_hi),
-#endif
-				   const int* getForceVerbose);
-
-     void FORT_MAKEFORCE (const amrex::Real* time,
-			  amrex::Real* force,
-			  const amrex::Real* vel,
-			  const amrex::Real* scal,
-                          ARLIM_P(f_lo), ARLIM_P(f_hi),
-                          ARLIM_P(v_lo), ARLIM_P(v_hi),
-                          ARLIM_P(s_lo), ARLIM_P(s_hi),
-                          const amrex::Real* dx,
-                          const amrex::Real* xlo, const amrex::Real* xhi,
-			  const amrex::Real* gravity,
-			  const int* scomp, const int* ncomp, const int* nscal,
-			  const int* getForceVerbose);
-#endif
-#ifdef GENGETFORCE
-     void FORT_MAKEFORCE (const amrex::Real* time, amrex::Real* force, const amrex::Real* rho,
-                          ARLIM_P(i_lo), ARLIM_P(i_hi),
-                          ARLIM_P(s_lo), ARLIM_P(s_hi),
-                          const amrex::Real* dx,
-                          const amrex::Real* xlo, const amrex::Real* xhi,
-			  const amrex::Real* gravity,
-			  const int* scomp, const int* ncomp);
-#endif
 #endif
 #ifdef __cplusplus
   }

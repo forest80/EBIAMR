@@ -34,10 +34,6 @@ ifeq (${USE_FLCTS}, TRUE)
   DEFINES += -DBL_DO_FLCT
 endif
 
-# This allows GetForce to call a Fortran routine
-#DEFINES += -DGENGETFORCE
-DEFINES += -DMOREGENGETFORCE
-
 # This is for the time-dependent turbulence forcing term
 DEFINES += -DDO_IAMR_FORCE
 

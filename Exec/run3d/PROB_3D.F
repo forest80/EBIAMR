@@ -2753,11 +2753,7 @@ c
                      do ii = 1, nn
                         xx = x + hxx*(float(ii) - half)
                         if (sqrt((xx-0.25)*(xx-0.25)+yy*yy+(zz+0.25)*(zz+0.25)).lt.0.1) then
-#ifdef MOREGENGETFORCE
-                           scal(i,j,k,2) = scal(i,j,k,2) + ds
-#else
                            scal(i,j,k,1) = scal(i,j,k,1) - ds
-#endif
                         endif
                         if (sqrt((xx+0.25)*(xx+0.25)+yy*yy+(zz+0.25)*(zz+0.25)).lt.0.1) then
                            scal(i,j,k,3) = scal(i,j,k,3) + ds
@@ -3566,19 +3562,10 @@ c
 c     This routine add the forcing terms to the momentum equation
 c
       subroutine FORT_MAKEFORCE(time,force,
-#ifdef MOREGENGETFORCE
-     &                          vel,
-#endif
      &                          scal,
      &                          DIMS(force),
-#ifdef MOREGENGETFORCE
-     &                          DIMS(vel),
-#endif
      &                          DIMS(scal),
      &                          dx,xlo,xhi,gravity,scomp,ncomp
-#ifdef MOREGENGETFORCE
-     &,                         nscal,getForceVerbose
-#endif
      &)
 
       implicit none
@@ -3590,14 +3577,7 @@ c
       REAL_T     xlo(SDIM), xhi(SDIM)
       REAL_T     force  (DIMV(force),scomp:scomp+ncomp-1)
       REAL_T     gravity
-#ifdef MOREGENGETFORCE
-      integer    DIMDEC(vel)
-      integer    nscal, getForceVerbose
-      REAL_T     vel    (DIMV(vel),0:SDIM-1)
-      REAL_T     scal   (DIMV(scal),0:nscal-1)
-#else
       REAL_T     scal   (DIMV(scal),0:0)
-#endif
 
       REAL_T     Lx, Ly, Lz, Lmin, HLx, HLy, HLz
       REAL_T     kappa, kappaMax
@@ -3628,16 +3608,6 @@ c
       integer isioproc, do_trac2
       integer nXvel, nYvel, nZvel, nRho, nTrac, nTrac2, nRhoScal, nTracScal, nTrac2Scal
 
-#ifdef MOREGENGETFORCE
-      REAL_T  velmin(0:SDIM-1)
-      REAL_T  velmax(0:SDIM-1)
-      REAL_T  scalmin(0:nscal-1)
-      REAL_T  scalmax(0:nscal-1)
-      REAL_T  forcemin(scomp:scomp+ncomp-1)
-      REAL_T  forcemax(scomp:scomp+ncomp-1)
-      REAL_T  tmpMin, tmpMax
-#endif
-
       call bl_ns_dotrac2(do_trac2)
 
       hx = dx(1)
@@ -3663,74 +3633,6 @@ c     Assumes components are in the following order
       nTracScal  = nTrac-SDIM
       nTrac2Scal = nTrac2-SDIM
 
-#ifdef MOREGENGETFORCE
-      if (getForceVerbose.gt.0) then
-         call bl_pd_is_ioproc(isioproc)
-         if (isioproc.eq.1) then
-
-            write (6,*) "In MAKEFORCE"
-            
-            write (6,*) "probtype = ",probtype
-            write (6,*) "gravity = ",gravity
-            write (6,*) "scomp = ",scomp
-            write (6,*) "ncomp = ",ncomp
-            write (6,*) "nscal = ",nscal
-            
-            do n = 0, SDIM-1
-               velmin(n) = 1.d234
-               velmax(n) = -1.d234
-            enddo
-            do n = 0, nscal-1
-               scalmin(n) = 1.d234
-               scalmax(n) = -1.d234
-            enddo
-
-            count = 0
-c     Get min/max
-            do k = klo, khi
-               do j = jlo, jhi
-                  do i = ilo, ihi
-c     Velocities
-                     do n = 0, SDIM-1
-                        if (vel(i,j,k,n).gt.velmax(n)) then
-                           velmax(n)=vel(i,j,k,n)
-                        endif
-                        if (vel(i,j,k,n).lt.velmin(n)) then
-                           velmin(n)=vel(i,j,k,n)
-                        endif
-                     enddo
-c     Scalars
-                     if (scal(i,j,k,0).lt.0.001) then
-                        count=count+1
-c                        write (*,*) i,j,k,scal(i,j,k,n)
-                     endif
-                     do n = 0, nscal-1
-                        if (scal(i,j,k,n).gt.scalmax(n)) then
-                           scalmax(n)=scal(i,j,k,n)
-                        endif
-                        if (scal(i,j,k,n).lt.scalmin(n)) then
-                           scalmin(n)=scal(i,j,k,n)
-                        endif
-                     enddo
-                     
-                  enddo
-               enddo
-            enddo
-
-            write(*,*) "DODGY DENSITY COUNT = ",count
-
-            do n = 0, SDIM-1
-               write (6,*) "velmin (",n,") = ",velmin(n)
-               write (6,*) "velmax (",n,") = ",velmax(n)
-            enddo
-            do n = 0, nscal-1
-               write (6,*) "scalmin(",n,") = ",scalmin(n)
-               write (6,*) "scalmax(",n,") = ",scalmax(n)
-            enddo
-         endif
-      endif
-#endif
-
 c
 c     Here's where the forcing actually gets done
 c
@@ -3749,11 +3651,6 @@ c
                      force(i,j,k,nXvel) = zero
                      force(i,j,k,nYvel) = zero
                      force(i,j,k,nZvel) = zero
-#ifdef MOREGENGETFORCE
-                     if (do_trac2.eq.1) then
-                        force(i,j,k,nZvel) = force(i,j,k,nZvel) + thermal_expansion*scal(i,j,k,nTrac2Scal)
-                     endif
-#endif
                   enddo
                enddo
             enddo
@@ -3768,24 +3665,6 @@ c     Round jet/plume
                      force(i,j,k,nXvel) = zero
                      force(i,j,k,nYvel) = zero
                      force(i,j,k,nZvel) = gravity*scal(i,j,k,nRhoScal)
-#ifdef MOREGENGETFORCE
-                     if (do_trac2.eq.1) then
-                        force(i,j,k,nZvel) = force(i,j,k,nZvel) + thermal_expansion*scal(i,j,k,nTrac2Scal)
-                     endif
-                     if (do_jet_sponge.eq.1) then
-c                        call bl_pd_is_ioproc(isioproc)
-c                        if (isioproc.eq.1) then
-c                           write (*,*) "jet_sponge_scale = ",jet_sponge_scale
-c                        endif
-                        if (z.gt.jet_sponge_height) then
-                           force(i,j,k,nXvel) = force(i,j,k,nXvel) - jet_sponge_scale*vel(i,j,k,0)*scal(i,j,k,nRhoScal)
-                           force(i,j,k,nYvel) = force(i,j,k,nYvel) - jet_sponge_scale*vel(i,j,k,1)*scal(i,j,k,nRhoScal)
-                           force(i,j,k,nZvel) = force(i,j,k,nZvel) - jet_sponge_scale*vel(i,j,k,2)*scal(i,j,k,nRhoScal)
-                        else if (sqrt(x*x+y*y).gt.jet_sponge_radius) then
-                           force(i,j,k,nZvel) = force(i,j,k,nZvel) - jet_sponge_scale*vel(i,j,k,2)*scal(i,j,k,nRhoScal)
-                        endif
-                     endif
-#endif
                   enddo
                enddo
             enddo
@@ -3926,24 +3805,6 @@ c     Adjust z offset for probtype 15
             enddo
 #endif
          else if (probtype.eq.19) then
-#ifdef MOREGENGETFORCE
-c     Coriolis
-            do k = klo, khi
-               z = xlo(3) + hz*(float(k-klo) + half)
-               do j = jlo, jhi
-                  y = xlo(2) + hy*(float(j-jlo) + half)
-                  do i = ilo, ihi
-                     x = xlo(1) + hx*(float(i-ilo) + half)
-                     force(i,j,k,nXvel) = scal(i,j,k,nRhoScal)*( two*omega*vel(i,j,k,nYvel)+omega*omega*x)
-                     force(i,j,k,nYvel) = scal(i,j,k,nRhoScal)*(-two*omega*vel(i,j,k,nXvel)+omega*omega*y)
-                     force(i,j,k,nZvel) = gravity*scal(i,j,k,nRhoScal)
-                     if (do_trac2.eq.1) then
-                        force(i,j,k,nZvel) = force(i,j,k,nZvel) + thermal_expansion*scal(i,j,k,nTrac2Scal)
-                     endif
-                  enddo
-               enddo
-            enddo
-#else
             do k = klo, khi
                do j = jlo, jhi
                   do i = ilo, ihi
@@ -3953,7 +3814,6 @@ c     Coriolis
                   enddo
                enddo
             enddo
-#endif
          else if (probtype.eq.99.and.abs(grav_angle).gt.0.001) then
 c     Angled gravity
             sga =  gravity * sin(Pi*grav_angle/180.)
@@ -4029,11 +3889,7 @@ c     Temperature perturbation
                   do k = klo, khi
                      do j = jlo, jhi
                         do i = ilo, ihi
-#ifdef MOREGENGETFORCE
-                           force(i,j,k,n) = heating_coeff * scal(i,j,k,nTracScal)
-#else
                            force(i,j,k,n) = zero
-#endif
                         enddo
                      enddo
                   enddo
@@ -4043,15 +3899,7 @@ c     Round Jet/Plume (18)
                      z = xlo(3) + hz*(float(k-klo) + half)
                      do j = jlo, jhi
                         do i = ilo, ihi
-#ifdef MOREGENGETFORCE
-                           if (abs(z-heating_centre).lt.heating_radius) then 
-                              force(i,j,k,n) = heating_coeff * scal(i,j,k,nTracScal)
-                           else
-                              force(i,j,k,n) = zero
-                           endif
-#else
                            force(i,j,k,n) = zero
-#endif
                         enddo
                      enddo
                   enddo
@@ -4061,15 +3909,7 @@ c     Coriolis evaporation (19)
                      z = xlo(3) + hz*(float(k-klo) + half)
                      do j = jlo, jhi
                         do i = ilo, ihi
-#ifdef MOREGENGETFORCE
-                           if (abs(z-heating_centre).lt.heating_radius) then 
-                              force(i,j,k,n) = heating_coeff
-                           else
-                              force(i,j,k,n) = zero
-                           endif
-#else
                            force(i,j,k,n) = zero
-#endif
                         enddo
                      enddo
                   enddo
@@ -4098,29 +3938,6 @@ c
          enddo
       endif
       
-#ifdef MOREGENGETFORCE
-      if (getForceVerbose.gt.0 .and. isioproc.eq.1) then
-         do n = scomp,scomp+ncomp-1
-            forcemin(n) = 1.d234
-            forcemax(n) = -1.d234
-         enddo
-         do k = klo, khi
-            do j = jlo, jhi
-               do i = ilo, ihi
-                  do n = scomp,ncomp+scomp-1
-                     forcemin(n) = min(forcemin(n),force(i,j,k,n))
-                     forcemax(n) = max(forcemax(n),force(i,j,k,n))
-                  enddo
-               enddo
-            enddo
-         enddo
-         do n = scomp,ncomp+scomp-1
-            write (6,*) "forcemin (",n,") = ",forcemin(n)
-            write (6,*) "forcemax (",n,") = ",forcemax(n)
-         enddo
-      endif
-#endif
-
       end
 
 c     ::: -----------------------------------------------------------

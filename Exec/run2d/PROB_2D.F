@@ -883,19 +883,10 @@ c
 c     This routine add the forcing terms to the momentum equation
 c
       subroutine FORT_MAKEFORCE(time,force,
-#ifdef MOREGENGETFORCE
-     &                          vel,
-#endif
      &                          scal,
      &                          DIMS(force),
-#ifdef MOREGENGETFORCE
-     &                          DIMS(vel),
-#endif
      &                          DIMS(scal),
      &                          dx,xlo,xhi,gravity,scomp,ncomp
-#ifdef MOREGENGETFORCE
-     &,                         nscal,getForceVerbose
-#endif
      &)
 
       implicit none
@@ -907,14 +898,7 @@ c
       REAL_T     xlo(SDIM), xhi(SDIM)
       REAL_T     force  (DIMV(force),scomp:scomp+ncomp-1)
       REAL_T     gravity
-#ifdef MOREGENGETFORCE
-      integer    DIMDEC(vel)
-      integer    getForceVerbose, nscal
-      REAL_T     vel    (DIMV(vel),0:SDIM-1)
-      REAL_T     scal   (DIMV(scal),0:nscal-1)
-#else
       REAL_T     scal   (DIMV(scal),0:0)
-#endif
 
 #include <probdata.H>
 
@@ -932,14 +916,6 @@ c
       integer nXvel, nYvel, nRho, nTrac, nTrac2
       integer nRhoScal, nTracScal, nTrac2Scal
 
-#ifdef MOREGENGETFORCE
-      REAL_T  velmin(0:SDIM-1)
-      REAL_T  velmax(0:SDIM-1)
-      REAL_T  scalmin(0:nscal-1)
-      REAL_T  scalmax(0:nscal-1)
-      REAL_T  forcemin(scomp:scomp+ncomp-1)
-      REAL_T  forcemax(scomp:scomp+ncomp-1)
-#endif
       hx = dx(1)
       hy = dx(2)
 
@@ -958,65 +934,6 @@ c     Assumes components are in the following order
       nRhoScal   = nRho-SDIM
       nTracScal  = nTrac-SDIM
       nTrac2Scal = nTrac2-SDIM
-
-#ifdef MOREGENGETFORCE
-      if (getForceVerbose.gt.0) then
-         call bl_pd_is_ioproc(isioproc)
-         if (isioproc .eq. 1) then
-
-            write (6,*) "In MAKEFORCE"
-            
-            write (6,*) "probtype = ",probtype
-            write (6,*) "gravity = ",gravity
-            write (6,*) "scomp = ",scomp
-            write (6,*) "ncomp = ",ncomp
-            write (6,*) "nscal = ",nscal
-            
-            do n = 0, SDIM-1
-               velmin(n) = 1.d234
-               velmax(n) = -1.d234
-            enddo
-            do n = 0, nscal-1
-               scalmin(n) = 1.d234
-               scalmax(n) = -1.d234
-            enddo
-            
-c     Get min/max
-            do j = jlo, jhi
-               do i = ilo, ihi
-c     Velocities
-                  do n = 0, SDIM-1
-                     if (vel(i,j,n).gt.velmax(n)) then
-                        velmax(n)=vel(i,j,n)
-                     endif
-                     if (vel(i,j,n).lt.velmin(n)) then
-                        velmin(n)=vel(i,j,n)
-                     endif
-                  enddo
-c     Scalars
-                  do n = 0, nscal-1
-                     if (scal(i,j,n).gt.scalmax(n)) then
-                        scalmax(n)=scal(i,j,n)
-                     endif
-                     if (scal(i,j,n).lt.scalmin(n)) then
-                        scalmin(n)=scal(i,j,n)
-                     endif
-                  enddo
-                  
-               enddo
-            enddo
-            
-            do n = 0, SDIM-1
-               write (6,*) "velmin (",n,") = ",velmin(n)
-               write (6,*) "velmax (",n,") = ",velmax(n)
-            enddo
-            do n = 0, nscal-1
-               write (6,*) "scalmin(",n,") = ",scalmin(n)
-               write (6,*) "scalmax(",n,") = ",scalmax(n)
-            enddo
-         endif
-      endif
-#endif
 
 c     
 c     Here's where the forcing actually gets done
@@ -1092,26 +1009,6 @@ c
          enddo
       endif
 
-#ifdef MOREGENGETFORCE
-      if (getForceVerbose.gt.0 .and. isioproc .eq. 1) then
-         do n = scomp,scomp+ncomp-1
-            forcemin(n) = 1.d234
-            forcemax(n) = -1.d234
-         enddo
-         do j = jlo, jhi
-            do i = ilo, ihi
-               do n = scomp,ncomp+scomp-1
-                  forcemin(n) = min(forcemin(n),force(i,j,n))
-                  forcemax(n) = max(forcemax(n),force(i,j,n))
-               enddo
-            enddo
-         enddo
-         do n = scomp,ncomp+scomp-1
-            write (6,*) "forcemin (",n,") = ",forcemin(n)
-            write (6,*) "forcemax (",n,") = ",forcemax(n)
-         enddo
-      endif
-#endif      
       end
 c ::: -----------------------------------------------------------
 c ::: This routine will tag high error cells based on the 

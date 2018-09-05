@@ -340,23 +340,7 @@ NavierStokes::advance (Real time,
     //
     // Add the advective and other terms to get scalars at t^{n+1}.
     //
-#ifdef MOREGENGETFORCE
-    if (do_scalar_update_in_order)
-    {
-	for (int iComp=0; iComp<NUM_SCALARS-1; iComp++)
-        {
-	    int iScal = first_scalar+scalarUpdateOrder[iComp];
-	    amrex::Print() << "... ... updating " << desc_lst[0].name(iScal) << '\n';
-	    scalar_update(dt,iScal,iScal);
-	}
-    }
-    else
-    {
-	scalar_update(dt,first_scalar+1,last_scalar);
-    }
-#else
     scalar_update(dt,first_scalar+1,last_scalar);
-#endif
     //
     // S appears in rhs of the velocity update, so we better do it now.
     //
@@ -383,7 +367,7 @@ NavierStokes::advance (Real time,
         if (level > 0)
             incrRhoAvg((iteration==ncycle ? 0.5 : 1.0) / Real(ncycle));
 
-k       // *****************  FINAL PROJECTION  *************
+        // *****************  FINAL PROJECTION  *************
         //
         //
         // Do a level project to update the pressure and velocity fields.
@@ -468,14 +452,8 @@ NavierStokes::predict_velocity (Real  dt,
 	 S_fpi.isValid() && U_fpi.isValid();
 	 ++S_fpi, ++U_fpi
 #else
-#ifdef MOREGENGETFORCE
-	     , S_fpi(*this,visc_terms,1,prev_time,State_Type,Density,NUM_SCALARS);
-	 S_fpi.isValid() && U_fpi.isValid();
-	 ++S_fpi, ++U_fpi
-#else
          ; U_fpi.isValid();
 	 ++U_fpi
-#endif
 #endif
 	)
     {
@@ -484,18 +462,7 @@ NavierStokes::predict_velocity (Real  dt,
 #ifdef BOUSSINESQ
         getForce(tforces,i,1,Xvel,BL_SPACEDIM,prev_time,S_fpi());
 #else
-#ifdef GENGETFORCE
-        getForce(tforces,i,1,Xvel,BL_SPACEDIM,prev_time,rho_ptime[U_fpi]);
-#elif MOREGENGETFORCE
-	if (getForceVerbose) {
-	  amrex::Print() << "---" << '\n' 
-			 << "A - Predict velocity:" << '\n'
-			 << " Calling getForce..." << '\n';
-	}
-        getForce(tforces,i,1,Xvel,BL_SPACEDIM,prev_time,U_fpi(),S_fpi(),0);
-#else
 	getForce(tforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-#endif		 
 #endif
         //
         // Test velocities, rho and cfl.
@@ -623,17 +590,7 @@ NavierStokes::scalar_advection (Real dt,
 #ifdef BOUSSINESQ
         getForce(tforces,i,1,fscalar,num_scalars,prev_time,Scal_fpi());
 #else
-#ifdef GENGETFORCE
-        getForce(tforces,i,1,fscalar,num_scalars,prev_time,rho_ptime[U_fpi]);
-#elif MOREGENGETFORCE
-	if (getForceVerbose) {
-	  amrex::Print() << "---" << '\n' << "C - scalar advection:" << '\n' 
-			 << " Calling getForce..." << '\n';
-	}
-        getForce(tforces,i,1,fscalar,num_scalars,prev_time,U_fpi(),S_fpi(),0);
-#else
         getForce(tforces,i,1,fscalar,num_scalars,rho_ptime[U_fpi]);
-#endif		 
 #endif		 
         
         if (use_forces_in_trans)
@@ -641,18 +598,7 @@ NavierStokes::scalar_advection (Real dt,
 #ifdef BOUSSINESQ
         getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,prev_time,S_fpi());
 #else
-#ifdef GENGETFORCE
-            getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,prev_time,rho_ptime[U_fpi]);
-#elif MOREGENGETFORCE
-	    if (getForceVerbose) {
-	      amrex::Print() << "---" << '\n' 
-			     << "D - scalar advection (use_forces_in_trans):" << '\n' 
-			     << " Calling getForce..." << '\n';
-	    }
-            getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,prev_time,U_fpi(),S_fpi(),0);
-#else
             getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-#endif		 
 #endif
             godunov->Sum_tf_gp_visc(tvelforces,vel_visc_terms[U_fpi],Gp[U_fpi],rho_ptime[U_fpi]);
         }
@@ -1046,9 +992,6 @@ NavierStokes::sum_integrated_quantities ()
         mgvort = std::max(mgvort,ns_level.MaxVal("mag_vort",time));
 #if (BL_SPACEDIM==3)
         udotlapu += ns_level.volWgtSum("udotlapu",time);
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-	forcing += ns_level.volWgtSum("forcing",time);
-#endif
 #endif
     }
 
@@ -1060,9 +1003,6 @@ NavierStokes::sum_integrated_quantities ()
     amrex::Print().SetPrecision(12) << "TIME= " << time << " ENERGY= " << energy << '\n';
 #if (BL_SPACEDIM==3)
     amrex::Print().SetPrecision(12) << "TIME= " << time << " UDOTLAPU= " << udotlapu << '\n';
-#if defined(GENGETFORCE) || defined(MOREGENGETFORCE)
-    amrex::Print().SetPrecision(12) << "TIME= " << time << " FORCING= " << forcing << '\n';
-#endif
 #endif
 }
 

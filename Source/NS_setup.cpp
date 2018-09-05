@@ -378,64 +378,6 @@ NavierStokes::variableSetUp ()
     //
     derive_lst.add("gradpz",IndexType::TheCellType(),1,FORT_DERGRDPZ,the_same_box);
     derive_lst.addComponent("gradpz",desc_lst,Press_Type,Pressure,1);
-#ifdef MOREGENGETFORCE
-    //
-    // radial velocity
-    //
-    derive_lst.add("radial_velocity",IndexType::TheCellType(),1,FORT_DERRADVEL,the_same_box);
-    derive_lst.addComponent("radial_velocity",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // azimuthal velocity
-    //
-    derive_lst.add("azimuthal_velocity",IndexType::TheCellType(),1,FORT_DERAZIVEL,the_same_box);
-    derive_lst.addComponent("azimuthal_velocity",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // x_velocity in laboratory frame for rotating frame of refernce
-    //
-    derive_lst.add("x_velocity_rot",IndexType::TheCellType(),1,FORT_DERXVELROT,the_same_box);
-    derive_lst.addComponent("x_velocity_rot",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // y_velocity in laboratory frame for rotating frame of refernce
-    //
-    derive_lst.add("y_velocity_rot",IndexType::TheCellType(),1,FORT_DERYVELROT,the_same_box);
-    derive_lst.addComponent("y_velocity_rot",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // magnitude of velocity in laboratory frame for rotating frame of refernce
-    //
-    derive_lst.add("mag_velocity_rot",IndexType::TheCellType(),1,FORT_DERMAGVELROT,the_same_box);
-    derive_lst.addComponent("mag_velocity_rot",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // magnitude of vorticity in laboratory frame for rotating frame of refernce
-    //
-    derive_lst.add("mag_vorticity_rot",IndexType::TheCellType(),1,FORT_DERMAGVORTROT,grow_box_by_one);
-    derive_lst.addComponent("mag_vorticity_rot",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-#endif
-#if defined(DO_IAMR_FORCE) && (defined(GENGETFORCE)||defined(MOREGENGETFORCE))
-    //
-    // forcing - used to calculate the rate of injection of energy in probtype 14 (HIT)
-    //
-    derive_lst.add("forcing",IndexType::TheCellType(),1,FORT_DERFORCING,the_same_box);
-    derive_lst.addComponent("forcing",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("forcing",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // forcex - used to put the forcing term in the plot file
-    //
-    derive_lst.add("forcex",IndexType::TheCellType(),1,FORT_DERFORCEX,the_same_box);
-    derive_lst.addComponent("forcex",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("forcex",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // forcey - used to put the forcing term in the plot file
-    //
-    derive_lst.add("forcey",IndexType::TheCellType(),1,FORT_DERFORCEY,the_same_box);
-    derive_lst.addComponent("forcey",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("forcey",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-    //
-    // forcez - used to put the forcing term in the plot file
-    //
-    derive_lst.add("forcez",IndexType::TheCellType(),1,FORT_DERFORCEZ,the_same_box);
-    derive_lst.addComponent("forcez",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("forcez",desc_lst,State_Type,Xvel,BL_SPACEDIM);
-#endif
     //
     // Turbulence Variable - for integrating on the fly
     //

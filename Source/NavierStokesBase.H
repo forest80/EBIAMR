@@ -215,28 +215,13 @@ protected:
 		   const amrex::Real       time,
                    const amrex::FArrayBox& Scal);
 #else
-#ifdef MOREGENGETFORCE
     void getForce (amrex::FArrayBox&       force,
                    int              gridno,
                    int              ngrow,
                    int              strt_comp,
                    int              num_comp,
-		   const amrex::Real       time,
-                   const amrex::FArrayBox& Vel,
-                   const amrex::FArrayBox& Scal,
-		   int              scalScomp);
-#else
-    void getForce (amrex::FArrayBox&       force,
-                   int              gridno,
-                   int              ngrow,
-                   int              strt_comp,
-                   int              num_comp,
-#ifdef GENGETFORCE
-		   const amrex::Real       time,
-#endif		 
                    const amrex::FArrayBox& Rho,
                    int              RComp = 0);
-#endif		 
 #endif		 
     //
     amrex::FluxRegister& getAdvFluxReg () {
