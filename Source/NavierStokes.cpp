@@ -279,9 +279,14 @@ NavierStokes::advance (Real time,
 		     << " with dt = "               << dt << '\n';
     }
     advance_setup(time,dt,iteration,ncycle);
+
+    // *****************  PREDICTOR  *****************
     //
     // Compute traced states for normal comp of velocity at half time level.
     //
+    //
+    // TODO:    Compute slopes of normal velocities and use slope limiters + upwinding to predict edge states
+    //          Don't use predict_velocity
     Real dummy   = 0.0;
     Real dt_test = predict_velocity(dt,dummy);
     //
@@ -294,6 +299,22 @@ NavierStokes::advance (Real time,
         MultiFab& S_old = get_old_data(State_Type);
         mac_project(time,dt,S_old,&mac_rhs,have_divu,umac_n_grow,true);
     }
+    //
+    // TODO:    Compute tentative quantities explicitly, 
+    //          using the MAC-projected velocity as advective velocity field 
+    //
+    //
+    // *****************  CORRECTOR  *************
+    //
+    // TODO:    Compute normal components of velocity edge states again, 
+    //          this time using predicted velocities as input 
+    //
+    //
+    // TODO:    Do MAC projection and update edge velocities.
+    //
+    // 
+    // TODO:    Compute tentative quantities explicitly, 
+    //          using the MAC-projected velocity as advective velocity field 
     //
     // Advect velocities.
     //
@@ -362,6 +383,8 @@ NavierStokes::advance (Real time,
         if (level > 0)
             incrRhoAvg((iteration==ncycle ? 0.5 : 1.0) / Real(ncycle));
 
+k       // *****************  FINAL PROJECTION  *************
+        //
         //
         // Do a level project to update the pressure and velocity fields.
         //
