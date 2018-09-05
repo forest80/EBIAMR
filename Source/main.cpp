@@ -59,7 +59,7 @@ main (int   argc,
         AmrLevel::SetEBSupportLevel(EBSupport::full);
         AmrLevel::SetEBMaxGrowCells(4,4,2);
 
-        initialize_EB(amr.Geom(amr.maxLevel()), amr.maxLevel(), amr.maxLevel());
+        initialize_EB(amr.Geom(amr.maxLevel()), amr.maxLevel(), 30);
 
         amr.init(strt_time,stop_time);
 
