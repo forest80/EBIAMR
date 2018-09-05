@@ -1284,7 +1284,7 @@ NavierStokes::writePlotFile (const std::string& dir,
         // volfrac threshhold for amrvis
         if (level == parent->finestLevel()) {
             for (int lev = 0; lev <= parent->finestLevel(); ++lev) {
-                os << ".000001\n";
+                os << "1.e-6\n";
             }
         }
     }
