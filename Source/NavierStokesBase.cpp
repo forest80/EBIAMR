@@ -72,6 +72,7 @@ int         NavierStokesBase::do_density_ref            = 0;
 int         NavierStokesBase::do_tracer_ref             = 0;
 int         NavierStokesBase::do_tracer2_ref            = 0;
 int         NavierStokesBase::do_vorticity_ref          = 0;
+int         NavierStokesBase::do_temp_ref               = 0;
 int         NavierStokesBase::do_scalar_update_in_order = 0; 
 Vector<int>  NavierStokesBase::scalarUpdateOrder;
 int         NavierStokesBase::getForceVerbose           = 0;
@@ -110,7 +111,7 @@ namespace
     bool benchmarking = false;
 }
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
 namespace
 {
     //
@@ -317,7 +318,7 @@ NavierStokesBase::variableCleanUp ()
     delete mac_projector;
     mac_projector = 0;
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     delete NSPC;
     NSPC = 0;
 #endif
@@ -440,7 +441,8 @@ NavierStokesBase::Initialize ()
     pp.query("do_tracer_ref",            do_tracer_ref    );
     pp.query("do_tracer2_ref",           do_tracer2_ref   );
     pp.query("do_vorticity_ref",         do_vorticity_ref );
-
+    pp.query("do_temp_ref",              do_temp_ref      );
+ 
     if (modify_reflux_normal_vel)
         amrex::Abort("modify_reflux_normal_vel is no longer supported");
 
@@ -577,7 +579,7 @@ NavierStokesBase::Initialize ()
 
     pp.query("harm_avg_cen2edge", def_harm_avg_cen2edge);
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     read_particle_params ();
 #endif
 
@@ -624,8 +626,10 @@ NavierStokesBase::advance_setup (Real time,
     
     umac_n_grow = 1;
     
+#ifdef AMREX_PARTICLES
     if (ncycle >= 1)
         umac_n_grow = ncycle;
+#endif
         
     mac_projector->setup(level);
     //
@@ -849,7 +853,7 @@ NavierStokesBase::checkPoint (const std::string& dir,
 {
     AmrLevel::checkPoint(dir, os, how, dump_old);
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     if (level == 0)
     {
         if (NSPC != 0)
@@ -1035,11 +1039,11 @@ NavierStokesBase::create_umac_grown (int nGrow)
     {
         BoxList bl = amrex::GetBndryCells(grids,nGrow);
 
-        BoxArray f_bnd_ba(bl);
-
-        bl.clear();
+        BoxArray f_bnd_ba(std::move(bl));
 
         BoxArray c_bnd_ba = f_bnd_ba; c_bnd_ba.coarsen(crse_ratio);
+
+        c_bnd_ba.maxSize(32);
 
         f_bnd_ba = c_bnd_ba; f_bnd_ba.refine(crse_ratio);
 
@@ -1802,7 +1806,7 @@ NavierStokesBase::init_additional_state_types ()
     }
     if (have_divu && _Divu!=Divu)
     {
-        amrex::Print() << "divu must be 0-th, Divu_Type component in the state\n";
+        amrex::Print() << "divu must be 0-th Divu_Type component in the state\n";
 
         amrex::Abort("NavierStokesBase::init_additional_state_types()");
     }
@@ -1828,7 +1832,7 @@ NavierStokesBase::init_additional_state_types ()
     }
     if (have_dsdt && _Dsdt!=Dsdt)
     {
-        amrex::Print() << "dsdt must be 0-th, Dsdt_Type component in the state\n";
+        amrex::Print() << "dsdt must be 0-th Dsdt_Type component in the state\n";
 
         amrex::Abort("NavierStokesBase::init_additional_state_types()");
     }
@@ -2372,7 +2376,11 @@ NavierStokesBase::okToContinue ()
 int 
 NavierStokesBase::steadyState()
 {
-	Real 	    max_change    = 0.0;
+    if (!get_state_data(State_Type).hasOldData()) {
+        return false; // If nothing to compare to, must not yet be steady :)
+    }
+
+    Real        max_change    = 0.0;
     MultiFab&   U_old         = get_old_data(State_Type);
     MultiFab&   U_new         = get_new_data(State_Type);
 
@@ -2532,7 +2540,6 @@ NavierStokesBase::post_init_state ()
 void
 NavierStokesBase::post_init (Real)
 {
-    fixUpGeometry();
 }
 
 //
@@ -2542,13 +2549,12 @@ void
 NavierStokesBase::post_regrid (int lbase,
 			       int new_finest)
 {
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     if (NSPC && level == lbase)
     {
         NSPC->Redistribute(lbase);
     }
 #endif
-    fixUpGeometry();
 }
 
 //
@@ -2557,12 +2563,10 @@ NavierStokesBase::post_regrid (int lbase,
 void
 NavierStokesBase::post_restart ()
 {
-    fixUpGeometry();
-
     make_rho_prev_time();
     make_rho_curr_time();
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     post_restart_particle ();
 #endif
 }
@@ -2578,9 +2582,12 @@ NavierStokesBase::post_restart ()
 void
 NavierStokesBase::post_timestep (int crse_iteration)
 {
+
+  BL_PROFILE("NavierStokesBase::post_timestep()");
+
     const int finest_level = parent->finestLevel();
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     post_timestep_particle (crse_iteration);
 #endif
 
@@ -4131,7 +4138,7 @@ NavierStokesBase::sum_jet_quantities ()
 
 #endif  // (BL_SPACEDIM == 3)
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
 
 void
 NavierStokesBase::read_particle_params ()
@@ -4170,7 +4177,7 @@ NavierStokesBase::read_particle_params ()
     ppp.query("particle_restart_file", particle_restart_file);
     //
     // This must be true the first time you try to restart from a checkpoint
-    // that was written with USE_PARTICLES=FALSE; i.e. one that doesn't have
+    // that was written with AMREX_PARTICLES=FALSE; i.e. one that doesn't have
     // the particle checkpoint stuff (even if there are no active particles).
     // Otherwise the code will fail when trying to read the checkpointed particles.
     //
@@ -4418,32 +4425,4 @@ NavierStokesBase::ParticleDerive (const std::string& name,
     }
 }
 
-#endif  // PARTICLES
-
-void
-NavierStokesBase::fixUpGeometry ()
-{
-    const auto& S = get_new_data(State_Type);
-
-    const int ng = volfrac->nGrow();
-
-    const auto& domain = geom.Domain();
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    for (MFIter mfi(S, true); mfi.isValid(); ++mfi)
-    {
-        EBCellFlagFab& flag = const_cast<EBCellFlagFab&>(static_cast<EBFArrayBox const&>
-                                                         (S[mfi]).getEBCellFlagFab());
-        const Box& bx = mfi.growntilebox(ng);
-        if (flag.getType(bx) == FabType::singlevalued)
-        {
-            iamr_ns_eb_fixup_geom(BL_TO_FORTRAN_BOX(bx),
-                                  BL_TO_FORTRAN_ANYD(flag),
-                                  BL_TO_FORTRAN_ANYD((*volfrac)[mfi]),
-                                  BL_TO_FORTRAN_BOX(domain));
-        }
-    }
-
-}
+#endif  // AMREX_PARTICLES

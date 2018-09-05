@@ -200,6 +200,10 @@ NavierStokes::initData ()
 
         state[State_Type].setTimeLevel(cur_time,dt,dt);
 
+	if (variable_scal_diff)
+	  //Make sure something reasonable is in diffn_cc
+	  calcDiffusivity(cur_time);
+	
         calc_divu(cur_time,dtin,Divu_new);
 
         if (have_dsdt)
@@ -214,7 +218,7 @@ NavierStokes::initData ()
     is_first_step_after_regrid = false;
     old_intersect_new          = grids;
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     initParticleData ();
 #endif
 }
@@ -367,8 +371,8 @@ NavierStokes::advance (Real time,
            p_avg.setVal(0);
     }
 
-#ifdef PARTICLES
-    if (theNSPC() != 0)
+#ifdef AMREX_PARTICLES
+    if (theNSPC() != 0 and NavierStokes::initial_iter != true)
     {
         theNSPC()->AdvectWithUmac(u_mac, level, dt);
     }
@@ -663,6 +667,7 @@ NavierStokes::scalar_advection (Real dt,
             //
             int use_conserv_diff = (advectionType[state_ind] == Conservative) ? true : false;
 
+            //AdvectionScheme adv_scheme = FPU;
             AdvectionScheme adv_scheme = PRE_MAC;
 
             if (adv_scheme == PRE_MAC)
@@ -1359,7 +1364,7 @@ NavierStokes::derive (const std::string& name,
                       Real               time,
                       int                ngrow)
 {
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     return ParticleDerive(name, time, ngrow);
 #else
     return AmrLevel::derive(name, time, ngrow);
@@ -1372,7 +1377,7 @@ NavierStokes::derive (const std::string& name,
                       MultiFab&          mf,
                       int                dcomp)
 {
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
         ParticleDerive(name,time,mf,dcomp);
 #else
         AmrLevel::derive(name,time,mf,dcomp);
@@ -2013,7 +2018,7 @@ NavierStokes::getViscTerms (MultiFab& visc_terms,
     // not allow for calling NavierStokes::getViscTerms with src_comp=Yvel
     // or Zvel
     //
-#ifndef NDEBUG
+#ifdef AMREX_DEBUG
     if (src_comp<BL_SPACEDIM && (src_comp!=Xvel || ncomp<BL_SPACEDIM))
     {
       amrex::Print() << "src_comp=" << src_comp << "   ncomp=" << ncomp << '\n';

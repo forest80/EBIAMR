@@ -11,4 +11,3 @@ ifndef ATMOS_MACOP
 endif
 
 F90EXE_sources += IAMR_MLMG_$(DIM)d.F90 IAMR_ns_$(DIM)d.F90
-

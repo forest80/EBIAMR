@@ -268,7 +268,11 @@ Diffusion::diffuse_scalar (Real                   dt,
     const MultiFab& volume = navier_stokes->Volume();
     
     if (verbose)
-      amrex::Print() << "... diffusing scalar: " << navier_stokes->get_desc_lst()[State_Type].name(sigma) << '\n';
+      amrex::Print() << "... Diffusion::diffuse_scalar(): " 
+                     << navier_stokes->get_desc_lst()[State_Type].name(sigma) 
+                     << " lev: " << level << '\n';
+
+    const Real strt_time = ParallelDescriptor::second();
 
     int allnull, allthere;
     checkBeta(betan, allthere, allnull);
@@ -574,6 +578,17 @@ Diffusion::diffuse_scalar (Real                   dt,
             S_new[Smfi].mult(S_new[Smfi],Smfi.tilebox(),Density,sigma,1);
 	}
     }
+
+    if (verbose)
+    {
+        const int IOProc   = ParallelDescriptor::IOProcessorNumber();
+        Real      run_time = ParallelDescriptor::second() - strt_time;
+
+        ParallelDescriptor::ReduceRealMax(run_time,IOProc);
+
+	amrex::Print() << "Diffusion::diffuse_scalar(): lev: " << level
+		       << ", time: " << run_time << '\n';
+    }
 }
 
 void
@@ -600,14 +615,16 @@ Diffusion::diffuse_velocity (Real                   dt,
                              const MultiFab* const* betanp1,
                              int                    betaComp)
 {
-  if (verbose) amrex::Print() << "... diffuse_velocity\n";
+    if (verbose) amrex::Print() << "... Diffusion::diffuse_velocity() lev: " << level << std::endl;
+
+    const Real strt_time = ParallelDescriptor::second();
 
     int allnull, allthere;
     checkBetas(betan, betanp1, allthere, allnull);
  
     BL_ASSERT( rho_flag == 1 || rho_flag == 3);
 
-#ifndef NDEBUG
+#ifdef AMREX_DEBUG
     for (int d = 0; d < BL_SPACEDIM; ++d)
         BL_ASSERT(allnull ? visc_coef[Xvel+d]>=0 : betan[d]->min(0,0) >= 0.0);
 #endif
@@ -665,6 +682,17 @@ Diffusion::diffuse_velocity (Real                   dt,
     {
         diffuse_tensor_velocity(dt,be_cn_theta,rho_half,rho_flag,
                                 delta_rhs,rhsComp,betan,betanp1,betaComp);
+    }
+
+    if (verbose)
+    {
+        const int IOProc   = ParallelDescriptor::IOProcessorNumber();
+        Real      run_time = ParallelDescriptor::second() - strt_time;
+
+        ParallelDescriptor::ReduceRealMax(run_time,IOProc);
+
+	amrex::Print() << "Diffusion::diffuse_velocity(): lev: " << level
+		       << ", time: " << run_time << '\n';
     }
 }
 
@@ -949,7 +977,7 @@ Diffusion::diffuse_Vsync (MultiFab&              Vsync,
     int allnull, allthere;
     checkBeta(beta, allthere, allnull);
 
-#ifndef NDEBUG
+#ifdef AMREX_DEBUG
     for (int d = 0; d < BL_SPACEDIM; ++d)
         BL_ASSERT(allnull ? visc_coef[Xvel+d]>=0 : beta[d]->min(0,0) >= 0.0);
 #endif
@@ -1357,9 +1385,11 @@ Diffusion::diffuse_Ssync (MultiFab&              Ssync,
 
     if (verbose)
     {
-      amrex::Print() << "Diffusion::diffuse_Ssync: "
-		     << navier_stokes->get_desc_lst()[State_Type].name(state_ind) << '\n';
+        amrex::Print() << "Diffusion::diffuse_Ssync lev: " << level << " "
+                       << navier_stokes->get_desc_lst()[State_Type].name(state_ind) << '\n';
     }
+
+    const Real strt_time = ParallelDescriptor::second();
 
     int allnull, allthere;
     checkBeta(beta, allthere, allnull);
@@ -1534,6 +1564,17 @@ Diffusion::diffuse_Ssync (MultiFab&              Ssync,
         {
             Ssync[Ssyncmfi].mult(S_new[Ssyncmfi],Ssyncmfi.tilebox(),Density,sigma,1);
         }
+    }
+
+    if (verbose)
+    {
+        const int IOProc   = ParallelDescriptor::IOProcessorNumber();
+        Real      run_time = ParallelDescriptor::second() - strt_time;
+
+        ParallelDescriptor::ReduceRealMax(run_time,IOProc);
+
+	amrex::Print() << "Diffusion::diffuse_Ssync(): lev: " << level
+		       << ", time: " << run_time << '\n';
     }
 }
 

@@ -20,7 +20,7 @@
 #include <ViscBndry.H>
 #include <AMReX_EBFArrayBox.H>
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
 #include <AMReX_AmrParticles.H>
 #endif
 
@@ -460,7 +460,7 @@ protected:
     static void Finalize ();
     static void read_geometry (); // Set metrics
 
-#ifdef PARTICLES
+#ifdef AMREX_PARTICLES
     static amrex::AmrTracerParticleContainer* theNSPC ();
     static void read_particle_params ();
 
@@ -618,8 +618,8 @@ protected:
     static amrex::Real cfl;           // desired maximum cfl
     static amrex::Real change_max;    // maximum change in dt over a timestep
     static amrex::Real fixed_dt;      // set > 0 to specify dt
-	static bool stop_when_steady; 	  // set to true if simulation should stop at steady-state
-	static amrex::Real steady_tol;    // tolerance for assuming steady-state has been reached
+    static bool stop_when_steady;     // set to true if simulation should stop at steady-state
+    static amrex::Real steady_tol;    // tolerance for assuming steady-state has been reached
     static int  initial_iter;  // flag for initial pressure iterations
     static int  initial_step;  // flag for initial iterations
     static amrex::Real dt_cutoff;     // minimum dt allowed
@@ -676,6 +676,7 @@ protected:
     static int  do_tracer_ref;
     static int  do_tracer2_ref;
     static int  do_vorticity_ref;
+    static int  do_temp_ref;
     static int  do_scalar_update_in_order;  // Flags to allow evaluation of source terms
     static amrex::Vector<int> scalarUpdateOrder;
     static int  getForceVerbose;            // Does exactly what it says on the tin
@@ -728,8 +729,6 @@ protected:
     const amrex::MultiCutFab* bndrycent;
     std::array<const amrex::MultiCutFab*,AMREX_SPACEDIM> areafrac;
     std::array<const amrex::MultiCutFab*,AMREX_SPACEDIM> facecent;
-
-    void fixUpGeometry ();
 };
 
 #endif
