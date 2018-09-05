@@ -600,7 +600,7 @@ Projection::syncProject (int             c_lev,
         sync_resid_fine.reset(new MultiFab(P_grids,P_dmap,1,ngrow));
     }
 
-    doMLMGNodalProjection(c_lev, 1, vels, phis, sigs, rhss, {&rhnd}, sync_tol, proj_abs_tol,
+    doMLMGNodalProjection(c_lev, 1, vels, phis, sigs, rhcc, {&rhnd}, sync_tol, proj_abs_tol,
                           sync_resid_crse, sync_resid_fine.get());
 
     //
@@ -1114,7 +1114,7 @@ Projection::initialPressureProject (int  c_lev)
     //
     // Project
     //
-    Vector<MultiFab*> rhs(maxlev, nullptr);
+    Vector<MultiFab*> rhcc(maxlev, nullptr);
     doMLMGNodalProjection(c_lev, f_lev+1, vel, phi,
                           amrex::GetVecOfPtrs(sig),
                           rhcc, {},
@@ -1326,7 +1326,7 @@ Projection::initialSyncProject (int       c_lev,
     }
 
     doMLMGNodalProjection(c_lev, f_lev+1, vel, phi, sig,
-                          amrex::GetVecOfPtrs(rhs),
+                          amrex::GetVecOfPtrs(rhcc),
                           {}, proj_tol, proj_abs_tol);
 
     //
@@ -2476,7 +2476,7 @@ void Projection::doMLMGNodalProjection (int c_lev, int nlevel,
         MultiFab resid_save;
         Real rmin, rmax;
 
-        mlndlap.compSyncResidualFine(*sync_resid_fine, *phi[c_lev], *vel[c_lev], rhs_cc[c_lev]);
+        mlndlap.compSyncResidualFine(*sync_resid_fine, *phi[c_lev], *vel[c_lev], rhcc[c_lev]);
     }
 
     if (sync_resid_crse != 0) {  // only level solve will come to here

@@ -3,13 +3,13 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Amr.H>
-#include <AMReX_EBTower.H>
+#include <AMReX_EB2.H>
 
 #include <NavierStokesBase.H>
 
 using namespace amrex;
 
-void initialize_EBIS(const int max_level);
+void initialize_EB (const Geometry& geom, const int required_level, const int max_level);
 
 int
 main (int   argc,
@@ -17,7 +17,6 @@ main (int   argc,
 {
     amrex::Initialize(argc,argv);
 
-    BL_PROFILE_REGION_START("main()");
     BL_PROFILE_VAR("main()", pmain);
 
     Real timer_tot = ParallelDescriptor::second();
@@ -29,17 +28,19 @@ main (int   argc,
     Real strt_time;
     Real stop_time;
 
-    ParmParse pp;
+    {
+        ParmParse pp;
 
-    max_step  = -1; 
-    num_steps = -1; 
-    strt_time =  0.0;
-    stop_time = -1.0;
-
-    pp.query("max_step",  max_step);
-    pp.query("num_steps", num_steps);
-    pp.query("strt_time", strt_time);
-    pp.query("stop_time", stop_time);
+        max_step  = -1; 
+        num_steps = -1; 
+        strt_time =  0.0;
+        stop_time = -1.0;
+        
+        pp.query("max_step",  max_step);
+        pp.query("num_steps", num_steps);
+        pp.query("strt_time", strt_time);
+        pp.query("stop_time", stop_time);
+    }
 
     if (strt_time < 0.0)
     {
@@ -55,12 +56,10 @@ main (int   argc,
         timer_init = ParallelDescriptor::second();
 
         Amr amr;
-
-        initialize_EBIS(amr.maxLevel());
-        EBTower::Build();
-        AMReX_EBIS::reset();  // We no longer needs the EBIndexSpace singleton.
         AmrLevel::SetEBSupportLevel(EBSupport::full);
-        AmrLevel::SetEBMaxGrowCells(5,4,2);
+        AmrLevel::SetEBMaxGrowCells(4,4,2);
+
+        initialize_EB(amr.Geom(amr.maxLevel()), amr.maxLevel(), amr.maxLevel());
 
         amr.init(strt_time,stop_time);
 
@@ -115,8 +114,6 @@ main (int   argc,
         {
             amr.writePlotFile();
         }
-
-        EBTower::Destroy();
     }
 
     timer_tot = ParallelDescriptor::second() - timer_tot;
@@ -129,10 +126,6 @@ main (int   argc,
                    << "Run Time advance      = " << timer_advance << "\n";
 
     BL_PROFILE_VAR_STOP(pmain);
-    BL_PROFILE_REGION_STOP("main()");
-    BL_PROFILE_SET_RUN_TIME(run_stop);
-    BL_PROFILE_FINALIZE();
-
 
     amrex::Finalize();
 
