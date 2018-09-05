@@ -25,5 +25,5 @@ initialize_EB (const Geometry& geom, const int required_coarsening_level,
 {
     BL_PROFILE("initialize_EB");
 
-    EB2::Build(geom, max_coarsening_level, max_coarsening_level);
+    EB2::Build(geom, required_coarsening_level, max_coarsening_level);
 }
