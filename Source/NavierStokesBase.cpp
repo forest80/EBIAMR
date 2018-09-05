@@ -1252,16 +1252,7 @@ NavierStokesBase::estTimeStep ()
         //
         // Get the velocity forcing.  For some reason no viscous forcing.
         //
-#ifdef BOUSSINESQ
-        const Real cur_time = state[State_Type].curTime();
-        // HACK HACK HACK 
-        // THIS CALL IS BROKEN 
-        // getForce(tforces,i,n_grow,Xvel,BL_SPACEDIM,cur_time,U_new[i]);
-        tforces.resize(amrex::grow(grids[i],n_grow),BL_SPACEDIM);
-        tforces.setVal(0.);
-#else
         getForce(tforces,i,n_grow,Xvel,BL_SPACEDIM,rho_ctime[Rho_mfi]);
-#endif		 
         tforces.minus(Gp[Rho_mfi],0,0,BL_SPACEDIM);
         //
         // Estimate the maximum allowable timestep from the Godunov box.
@@ -2854,16 +2845,7 @@ NavierStokesBase::scalar_advection_update (Real dt,
 
             for (int sigma = sComp; sigma <= last_scalar; sigma++)
             {
-#ifdef BOUSSINESQ
-                const Real halftime = 0.5*(state[State_Type].curTime()+state[State_Type].prevTime());
-		FArrayBox Scal(amrex::grow(grids[i],0),1);
-		Scal.copy(S_old[Rho_mfi],Tracer,0,1);
-		Scal.plus(S_new[Rho_mfi],Tracer,0,1);
-		Scal.mult(0.5);
-                getForce(tforces,i,0,sigma,1,halftime,Scal);
-#else
                 getForce(tforces,i,0,sigma,1,rho_halftime[Rho_mfi]);
-#endif		 
                 godunov->Add_aofs_tf(S_old[Rho_mfi],S_new[Rho_mfi],sigma,1,
                                      Aofs[Rho_mfi],sigma,tforces,0,grids[i],dt);
             }
@@ -3312,27 +3294,15 @@ NavierStokesBase::velocity_advection (Real dt)
     // Compute the advective forcing.
     //
     for (FillPatchIterator
-#ifdef BOUSSINESQ
-             U_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Xvel   ,BL_SPACEDIM),
-             S_fpi(*this,visc_terms,       1,prev_time,State_Type,Tracer,1),
-             Rho_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Density,1);
-         S_fpi.isValid() && U_fpi.isValid() && Rho_fpi.isValid(); 
-         ++S_fpi, ++U_fpi, ++Rho_fpi
-#else
              U_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Xvel,BL_SPACEDIM),
              Rho_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Density,1);
          U_fpi.isValid() && Rho_fpi.isValid(); 
          ++U_fpi, ++Rho_fpi
-#endif
 	)
     {
         const int i = U_fpi.index();
 
-#ifdef BOUSSINESQ
-        getForce(tforces,i,1,Xvel,BL_SPACEDIM,prev_time,S_fpi());
-#else
         getForce(tforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-#endif
         godunov->Sum_tf_gp_visc(tforces,visc_terms[U_fpi],Gp[U_fpi],rho_ptime[U_fpi]);
 
         D_TERM(bndry[0] = getBCArray(State_Type,i,0,1);,
@@ -3470,19 +3440,7 @@ NavierStokesBase::velocity_advection_update (Real dt)
     {
         const int i = Rhohalf_mfi.index();
 
-#ifdef BOUSSINESQ
-        //
-	// Average the new and old time to get half time approximation.
-        //
-        const Real half_time = 0.5*(state[State_Type].prevTime()+state[State_Type].curTime());
-	FArrayBox Scal(grids[i],1);
-	Scal.copy(U_old[Rhohalf_mfi],Tracer,0,1);
-	Scal.plus(U_new[Rhohalf_mfi],Tracer,0,1);
-	Scal.mult(0.5);
-        getForce(tforces,i,0,Xvel,BL_SPACEDIM,half_time,Scal);
-#else
 	getForce(tforces,i,0,Xvel,BL_SPACEDIM,halftime[i]);
-#endif		 
         //
         // Do following only at initial iteration--per JBB.
         //
@@ -3548,26 +3506,13 @@ NavierStokesBase::initial_velocity_diffusion_update (Real dt)
         MultiFab& Rh = get_rho_half_time();
 
         for (FillPatchIterator P_fpi(*this,get_old_data(Press_Type),0,prev_pres_time,Press_Type,0,1)
-#ifdef BOUSSINESQ
-                              ,S_fpi(*this,get_old_data(State_Type),0,prev_time,State_Type,Tracer,1)
-#endif
              ;P_fpi.isValid() 
-#ifdef BOUSSINESQ
-             ,S_fpi.isValid()
-#endif
              ;
-#ifdef BOUSSINESQ
-             ++S_fpi,
-#endif
              ++P_fpi)
         {
             const int i = P_fpi.index();
 
-#ifdef BOUSSINESQ
-            getForce(tforces,i,0,Xvel,BL_SPACEDIM,prev_time,S_fpi());
-#else
             getForce(tforces,i,0,Xvel,BL_SPACEDIM,rho_ptime[P_fpi]);
-#endif		 
             godunov->Sum_tf_gp_visc(tforces,visc_terms[P_fpi],Gp[P_fpi],Rh[P_fpi]);
 
             S.resize(U_old[P_fpi].box(),BL_SPACEDIM);

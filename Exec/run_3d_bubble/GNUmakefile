@@ -21,9 +21,6 @@ USE_PARTICLES   = TRUE
 
 USE_MPI   = TRUE
 
-# This allows GetForce to call a Fortran routine
-DEFINES += -DBOUSSINESQ
-
 EBASE     = amr
 
 Bpack   := ./Make.package

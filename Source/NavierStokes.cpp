@@ -447,23 +447,13 @@ NavierStokes::predict_velocity (Real  dt,
 
     for (FillPatchIterator U_fpi(*this,visc_terms,Godunov::hypgrow(),
                                  prev_time,State_Type,Xvel,BL_SPACEDIM)
-#ifdef BOUSSINESQ
-             ,S_fpi(*this,visc_terms,1,prev_time,State_Type,Tracer,1);
-	 S_fpi.isValid() && U_fpi.isValid();
-	 ++S_fpi, ++U_fpi
-#else
          ; U_fpi.isValid();
 	 ++U_fpi
-#endif
 	)
     {
         const int i = U_fpi.index();
 
-#ifdef BOUSSINESQ
-        getForce(tforces,i,1,Xvel,BL_SPACEDIM,prev_time,S_fpi());
-#else
 	getForce(tforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-#endif
         //
         // Test velocities, rho and cfl.
         //
@@ -578,28 +568,17 @@ NavierStokes::scalar_advection (Real dt,
     // Compute the advective forcing.
     //
     for (FillPatchIterator U_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Xvel,BL_SPACEDIM),
-#ifdef BOUSSINESQ
-             Scal_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,Tracer,1),
-#endif
              S_fpi(*this,visc_terms,Godunov::hypgrow(),prev_time,State_Type,fscalar,num_scalars);
          U_fpi.isValid() && S_fpi.isValid();
          ++U_fpi, ++S_fpi)
     {
         const int i = U_fpi.index();
 
-#ifdef BOUSSINESQ
-        getForce(tforces,i,1,fscalar,num_scalars,prev_time,Scal_fpi());
-#else
         getForce(tforces,i,1,fscalar,num_scalars,rho_ptime[U_fpi]);
-#endif		 
         
         if (use_forces_in_trans)
         {
-#ifdef BOUSSINESQ
-        getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,prev_time,S_fpi());
-#else
             getForce(tvelforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-#endif
             godunov->Sum_tf_gp_visc(tvelforces,vel_visc_terms[U_fpi],Gp[U_fpi],rho_ptime[U_fpi]);
         }
 

@@ -23,45 +23,6 @@ using namespace amrex;
 // and velocity_advection routines.
 //
 
-#ifdef BOUSSINESQ
-void
-NavierStokesBase::getForce (FArrayBox&       force,
-			    int              gridno,
-			    int              ngrow,
-			    int              scomp,
-			    int              ncomp,
-			    const Real       time,
-			    const FArrayBox& Scal)
-{
-    force.resize(amrex::grow(grids[gridno],ngrow),ncomp);
-
-    if (scomp == Xvel && ncomp == BL_SPACEDIM)
-    {
-       if (Scal.nComp() > 1) 
-       {
-	 amrex::Print() << "OOPS -- ONLY SUPPOSED TO BE ONE COMPONENT IN SCALAR " << std::endl;
-	 exit(0);
-       }
-
-       const Real* dx       = geom.CellSize();
-       const int*  f_lo     = force.loVect();
-       const int*  f_hi     = force.hiVect();
-       const int*  s_lo     = Scal.loVect();
-       const int*  s_hi     = Scal.hiVect();
-   
-       RealBox gridloc = RealBox(grids[gridno],geom.CellSize(),geom.ProbLo());
-
-       const Real* ScalDataPtr = Scal.dataPtr(0);
-       FORT_MAKEFORCE (force.dataPtr(), ScalDataPtr,
-   		       ARLIM(f_lo), ARLIM(f_hi),
-   		       ARLIM(s_lo), ARLIM(s_hi),
-   		       dx, gridloc.lo(), gridloc.hi(),
-   		       &scomp,&ncomp);
-    } else {
-       force.setVal(0.0);
-    }
-}
-#else
 void
 NavierStokesBase::getForce (FArrayBox&       force,
 			    int              gridno,
@@ -101,4 +62,3 @@ NavierStokesBase::getForce (FArrayBox&       force,
         }
     }    
 }
-#endif

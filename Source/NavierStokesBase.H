@@ -206,15 +206,6 @@ protected:
     //
     // Get the forcing term.
     //
-#ifdef BOUSSINESQ
-    void getForce (amrex::FArrayBox&       force,
-                   int              gridno,
-                   int              ngrow,
-                   int              strt_comp,
-                   int              num_comp,
-		   const amrex::Real       time,
-                   const amrex::FArrayBox& Scal);
-#else
     void getForce (amrex::FArrayBox&       force,
                    int              gridno,
                    int              ngrow,
@@ -222,7 +213,6 @@ protected:
                    int              num_comp,
                    const amrex::FArrayBox& Rho,
                    int              RComp = 0);
-#endif		 
     //
     amrex::FluxRegister& getAdvFluxReg () {
         BL_ASSERT(advflux_reg);
