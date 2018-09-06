@@ -287,8 +287,8 @@ NavierStokes::advance (Real time,
     //
     // TODO:    Compute slopes of normal velocities and use slope limiters + upwinding to predict edge states
     //          Don't use predict_velocity
-    Real dummy   = 0.0;
-    Real dt_test = predict_velocity(dt,dummy);
+    Real dt_test = est_variable_timestep(dt);
+    predict_velocity(dt);
     //
     // Do MAC projection and update edge velocities.
     //
@@ -394,13 +394,11 @@ NavierStokes::advance (Real time,
 }
 
 //
-// Predict the edge velocities which go into forming u_mac.  This
-// function also returns an estimate of dt for use in variable timesteping.
+// Predict the edge velocities which go into forming u_mac.  
 //
 
-Real
-NavierStokes::predict_velocity (Real  dt,
-                                Real& comp_cfl)
+void
+NavierStokes::predict_velocity (Real  dt)
 {
     BL_PROFILE("NavierStokes::predict_velocity()");
 
@@ -421,45 +419,26 @@ NavierStokes::predict_velocity (Real  dt,
     MultiFab visc_terms(grids,dmap,nComp,1);
 
     if (be_cn_theta != 1.0)
-    {
-	getViscTerms(visc_terms,Xvel,nComp,prev_time);
-    }
+        getViscTerms(visc_terms,Xvel,nComp,prev_time);
     else
-    {
-	visc_terms.setVal(0);
-    }
-    //
-    // Set up the timestep estimation.
-    //
-    Real cflgrid,u_max[3];
-    Real cflmax = 1.0e-10;
-    comp_cfl    = (level == 0) ? cflmax : comp_cfl;
+        visc_terms.setVal(0);
 
     FArrayBox tforces;
 
     Vector<int> bndry[BL_SPACEDIM];
 
     MultiFab Gp(grids,dmap,BL_SPACEDIM,1);
-
     getGradP(Gp, prev_pres_time);
     
     FArrayBox null_fab;
 
-    for (FillPatchIterator U_fpi(*this,visc_terms,Godunov::hypgrow(),
-                                 prev_time,State_Type,Xvel,BL_SPACEDIM)
-         ; U_fpi.isValid();
-	 ++U_fpi
-	)
+    FillPatchIterator U_fpi(*this,visc_terms,Godunov::hypgrow(), 
+                            prev_time,State_Type,Xvel,BL_SPACEDIM);
+    for (U_fpi; U_fpi.isValid(); ++U_fpi)
     {
         const int i = U_fpi.index();
 
-	getForce(tforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
-        //
-        // Test velocities, rho and cfl.
-        //
-        cflgrid  = godunov->test_u_rho(U_fpi(),rho_ptime[U_fpi],grids[i],dx,dt,u_max);
-        cflmax   = std::max(cflgrid,cflmax);
-        comp_cfl = std::max(cflgrid,comp_cfl);
+        getForce(tforces,i,1,Xvel,BL_SPACEDIM,rho_ptime[U_fpi]);
         //
         // Compute the total forcing.
         //
@@ -485,9 +464,41 @@ NavierStokes::predict_velocity (Real  dt,
 #endif
                              U_fpi(), tforces);
     }
+}
+
+//
+// Return an estimate of dt for use in variable timesteping.
+//
+
+Real
+NavierStokes::est_variable_timestep(Real  dt)
+{
+    BL_PROFILE("NavierStokes::est_variable_time_step()");
+
+    if (verbose) amrex::Print() << "... compute estimate of variable dt\n";
+    //
+    // Get simulation parameters.
+    //
+    const int   nComp          = BL_SPACEDIM;
+    const Real* dx             = geom.CellSize();
+    const Real  prev_time      = state[State_Type].prevTime();
+    //
+    // Set up the timestep estimation.
+    //
+    Real cflgrid,u_max[3];
+    Real cflmax = 1.0e-10;
+
+    MultiFab& S_old = get_old_data(State_Type);
+    FillPatchIterator U_fpi(*this,S_old,Godunov::hypgrow(),
+                            prev_time,State_Type,Xvel,BL_SPACEDIM);
+    for (U_fpi; U_fpi.isValid(); ++U_fpi)
+    {
+        const int i = U_fpi.index();
+        cflgrid  = godunov->test_u_rho(U_fpi(),rho_ptime[U_fpi],grids[i],dx,dt,u_max);
+        cflmax   = std::max(cflgrid,cflmax);
+    }
 
     Real tempdt = std::min(change_max,cfl/cflmax);
-
     ParallelDescriptor::ReduceRealMin(tempdt);
 
     return dt*tempdt;

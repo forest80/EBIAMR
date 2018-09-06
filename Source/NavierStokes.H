@@ -191,10 +191,13 @@ private:
 			  amrex::Vector<int>&  nc_save,
 			  amrex::Vector<amrex::Real>& dt_save);
     //
-    // Compute divergent mac velocities, estimate best timestep
-    // from t^n data, and compile cfl number.
+    // Compute divergent mac velocities.
     //
-    amrex::Real predict_velocity (amrex::Real dt, amrex::Real& comp_cfl);
+    void predict_velocity (amrex::Real dt);
+    //
+    // Estimate best timestep from t^n data.
+    //
+    amrex::Real est_variable_timestep (amrex::Real dt);
     //
     // Advect scalars.
     //
