@@ -278,17 +278,25 @@ NavierStokes::advance (Real time,
 		     << " : starting time = "       << time
 		     << " with dt = "               << dt << '\n';
     }
-    advance_setup(time,dt,iteration,ncycle);
+    advance_setup(time, dt, iteration, ncycle);
 
     // *****************  PREDICTOR  *****************
     //
     // Compute traced states for normal comp of velocity at half time level.
     //
+    Real dt_test = est_variable_timestep(dt);
+    predict_velocity(dt);
+
+    ////////////////////////////////////////////////////////////////////////
     //
     // TODO:    Compute slopes of normal velocities and use slope limiters + upwinding to predict edge states
     //          Don't use predict_velocity
-    Real dt_test = est_variable_timestep(dt);
-    predict_velocity(dt);
+    //
+    // Real dt_test = MethodOfLines->est_variable_timestep(dt);
+    // MethodOfLines->extrap_edge_vel(dt);
+    //
+    ////////////////////////////////////////////////////////////////////////
+    
     //
     // Do MAC projection and update edge velocities.
     //
@@ -299,23 +307,52 @@ NavierStokes::advance (Real time,
         MultiFab& S_old = get_old_data(State_Type);
         mac_project(time,dt,S_old,&mac_rhs,have_divu,umac_n_grow,true);
     }
+    ////////////////////////////////////////////////////////////////////////
     //
     // TODO:    Compute tentative quantities explicitly, 
     //          using the MAC-projected velocity as advective velocity field 
     //
+    // const int first_scalar = Density;
+    // const int last_scalar  = first_scalar + NUM_SCALARS - 1;
+    // scalar_advection(dt,first_scalar,last_scalar);
+    // for (int sigma = first_scalar; i <= last_scalar; i++)
+    //     MethodOfLines->predictor_scalar_update(dt, sigma)
+    //
+    // MethodOfLines->predictor_velocity_update(dt)
     //
     // *****************  CORRECTOR  *************
     //
     // TODO:    Compute normal components of velocity edge states again, 
     //          this time using predicted velocities as input 
     //
+    // MethodOfLines->extrap_edge_vel(dt);
     //
-    // TODO:    Do MAC projection and update edge velocities.
+    // TODO:    Do MAC projection and update edge velocities (just uncomment?)
     //
+    // if (do_mac_proj) 
+    // {
+    //     MultiFab mac_rhs(grids,dmap,1,0);
+    //     create_mac_rhs(mac_rhs,0,time,dt);
+    //     MultiFab& S_old = get_old_data(State_Type);
+    //     mac_project(time,dt,S_old,&mac_rhs,have_divu,umac_n_grow,true);
+    // }
     // 
     // TODO:    Compute tentative quantities explicitly, 
     //          using the MAC-projected velocity as advective velocity field 
     //
+    // const int first_scalar = Density;
+    // const int last_scalar  = first_scalar + NUM_SCALARS - 1;
+    // scalar_advection(dt,first_scalar,last_scalar);
+    // for (int sigma = first_scalar; i <= last_scalar; i++)
+    //     MethodOfLines->corrector_scalar_update(dt, sigma)
+    //
+    // MethodOfLines->corrector_velocity_update(dt)
+    //
+    ////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////
+    //
+    // TODO: Remove until next comment line
     // Advect velocities.
     //
     if (do_mom_diff == 0) 
@@ -342,23 +379,11 @@ NavierStokes::advance (Real time,
     //
     scalar_update(dt,first_scalar+1,last_scalar);
     //
-    // S appears in rhs of the velocity update, so we better do it now.
-    //
-    if (have_divu)
-    {
-        calc_divu(time+dt,dt,get_new_data(Divu_Type));
-        if (have_dsdt)
-        {
-            calc_dsdt(time,dt,get_new_data(Dsdt_Type));
-            if (initial_step)
-                MultiFab::Copy(get_old_data(Dsdt_Type),
-                               get_new_data(Dsdt_Type),0,0,1,0);
-        }
-    }
-    //
     // Add the advective and other terms to get velocity at t^{n+1}.
     //
     velocity_update(dt);
+    //
+    ////////////////////////////////////////////////////////////////////////
     //
     // Increment rho average.
     //
@@ -391,6 +416,44 @@ NavierStokes::advance (Real time,
     advance_cleanup(iteration,ncycle);
 
     return dt_test;  // Return estimate of best new timestep.
+}
+
+//
+// Return an estimate of dt for use in variable timesteping.
+//
+
+Real
+NavierStokes::est_variable_timestep(Real  dt)
+{
+    BL_PROFILE("NavierStokes::est_variable_time_step()");
+
+    if (verbose) amrex::Print() << "... compute estimate of variable dt\n";
+    //
+    // Get simulation parameters.
+    //
+    const int   nComp          = BL_SPACEDIM;
+    const Real* dx             = geom.CellSize();
+    const Real  prev_time      = state[State_Type].prevTime();
+    //
+    // Set up the timestep estimation.
+    //
+    Real cflgrid,u_max[3];
+    Real cflmax = 1.0e-10;
+
+    MultiFab& S_old = get_old_data(State_Type);
+    FillPatchIterator U_fpi(*this,S_old,Godunov::hypgrow(),
+                            prev_time,State_Type,Xvel,BL_SPACEDIM);
+    for (U_fpi; U_fpi.isValid(); ++U_fpi)
+    {
+        const int i = U_fpi.index();
+        cflgrid  = godunov->test_u_rho(U_fpi(),rho_ptime[U_fpi],grids[i],dx,dt,u_max);
+        cflmax   = std::max(cflgrid,cflmax);
+    }
+
+    Real tempdt = std::min(change_max,cfl/cflmax);
+    ParallelDescriptor::ReduceRealMin(tempdt);
+
+    return dt*tempdt;
 }
 
 //
@@ -464,44 +527,6 @@ NavierStokes::predict_velocity (Real  dt)
 #endif
                              U_fpi(), tforces);
     }
-}
-
-//
-// Return an estimate of dt for use in variable timesteping.
-//
-
-Real
-NavierStokes::est_variable_timestep(Real  dt)
-{
-    BL_PROFILE("NavierStokes::est_variable_time_step()");
-
-    if (verbose) amrex::Print() << "... compute estimate of variable dt\n";
-    //
-    // Get simulation parameters.
-    //
-    const int   nComp          = BL_SPACEDIM;
-    const Real* dx             = geom.CellSize();
-    const Real  prev_time      = state[State_Type].prevTime();
-    //
-    // Set up the timestep estimation.
-    //
-    Real cflgrid,u_max[3];
-    Real cflmax = 1.0e-10;
-
-    MultiFab& S_old = get_old_data(State_Type);
-    FillPatchIterator U_fpi(*this,S_old,Godunov::hypgrow(),
-                            prev_time,State_Type,Xvel,BL_SPACEDIM);
-    for (U_fpi; U_fpi.isValid(); ++U_fpi)
-    {
-        const int i = U_fpi.index();
-        cflgrid  = godunov->test_u_rho(U_fpi(),rho_ptime[U_fpi],grids[i],dx,dt,u_max);
-        cflmax   = std::max(cflgrid,cflmax);
-    }
-
-    Real tempdt = std::min(change_max,cfl/cflmax);
-    ParallelDescriptor::ReduceRealMin(tempdt);
-
-    return dt*tempdt;
 }
 
 //
